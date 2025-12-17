@@ -152,7 +152,7 @@ Running `node load_test.js 1000` demonstrates:
 - **Convex**: Cloud database for persistence
 - **TypeScript**: Type-safe code
 
-## 📝 For Your Report
+## 📝 For Report
 
 1. **Why TCP?** Ordering and reliability are essential for file transfers
 2. **Why Queue?** Prevents server overload during traffic spikes
