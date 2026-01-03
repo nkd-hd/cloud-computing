@@ -24,14 +24,25 @@
  * This is called "Location Transparency".
  */
 const RPC_METHODS = {
-  // File Operations
+  // File Operations (Drive Clone)
   UPLOAD_FILE: 'UPLOAD_FILE',     // Upload a file to the drive
   LIST_FILES: 'LIST_FILES',       // Get all files in the drive
   DELETE_FILE: 'DELETE_FILE',     // Remove a file from the drive
-  
-  // Utility (for your lecturer's load testing requirement)
-  CHECK_BALANCE: 'CHECK_BALANCE', // Example method to demonstrate queueing
-  PING: 'PING'                    // Health check
+
+  // ============ UNIVERSITY PORTAL SERVICES ============
+
+  // Finance Service
+  CHECK_BALANCE: 'CHECK_BALANCE',       // Get student account balance
+  MAKE_PAYMENT: 'MAKE_PAYMENT',         // Process fee payment
+  GET_FEES_STATEMENT: 'GET_FEES_STATEMENT', // Get detailed fees breakdown
+
+  // Academics Service  
+  GET_GRADES: 'GET_GRADES',             // Get student grades/transcript
+  UPLOAD_ASSIGNMENT: 'UPLOAD_ASSIGNMENT', // Submit coursework
+  GET_TIMETABLE: 'GET_TIMETABLE',       // Get class schedule
+
+  // Utility
+  PING: 'PING'                          // Health check
 };
 
 /**
@@ -70,7 +81,7 @@ const createMessage = (method, payload, authToken) => {
     },
     body: payload
   };
-  
+
   /**
    * CONCEPT: Framing
    * Networks send continuous streams of bytes. How do we know where one

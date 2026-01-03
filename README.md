@@ -1,149 +1,189 @@
-# Google Drive Clone - RPC Architecture Demo
+# IS-BST University Portal
 
-A minimalistic Google Drive clone designed to demonstrate core **distributed systems** concepts for academic purposes:
+A **distributed school portal system** demonstrating core cloud computing concepts:
 
-- **RPC (Remote Procedure Calls)**
-- **Sockets (TCP)**
-- **Queuing (Traffic Shaping)**
-- **Persistence (Database)**
-- **Security (Authentication)**
+- **RPC (Remote Procedure Calls)** with Stub/Skeleton pattern
+- **TCP Sockets** for reliable network communication  
+- **Message Queuing** for traffic shaping
+- **Microservices Architecture** (Finance, Academics, Files)
+- **Persistent Storage** (Convex) vs In-Memory Queue
+
+---
 
 ## 🏗️ Architecture
 
+The portal uses a **Drive-style interface** as the **service orchestrator**. Each "folder" represents a distributed microservice:
+
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        CLIENT (Next.js)                             │
-│  ┌──────────────────┐                    ┌──────────────────────┐  │
-│  │    Frontend UI   │ ──── fetch() ────► │  API Route (STUB)    │  │
-│  │    (page.tsx)    │                    │  (route.ts)          │  │
-│  └──────────────────┘                    └──────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────┘
-                                                      │
-                                                      │ TCP Socket
-                                                      ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                      RPC SERVER (Node.js)                           │
-│  ┌──────────────────┐        ┌──────────────────────────────────┐  │
-│  │    TCP Listener  │ ─────► │  Processing Queue (Non-Persistent)│  │
-│  │    (SKELETON)    │        │  ┌───┐ ┌───┐ ┌───┐ ┌───┐        │  │
-│  └──────────────────┘        │  │ J │ │ J │ │ J │ │ J │ ...    │  │
-│                               │  └───┘ └───┘ └───┘ └───┘        │  │
-│                               └──────────────────────────────────┘  │
-│                                              │                       │
-│                                              ▼                       │
-│                               ┌──────────────────────┐              │
-│                               │    Worker Thread     │              │
-│                               │    (Job Processor)   │              │
-│                               └──────────────────────┘              │
-└─────────────────────────────────────────────────────────────────────┘
-                                              │
-                                              │ HTTP API
-                                              ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                    CONVEX DATABASE (Persistent)                     │
-│                      uploadLog | jobLog                             │
-└─────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    IS-BST UNIVERSITY PORTAL (Client)                    │
+│                                                                         │
+│  ┌────────────────┐  ┌────────────────┐  ┌────────────────────────────┐ │
+│  │ 💰 Finance     │  │ 📚 Academics   │  │ 📁 My Files               │ │
+│  │    Service     │  │    Service     │  │    Service                │ │
+│  │ ─────────────  │  │ ─────────────  │  │ ────────────────────────  │ │
+│  │ • Check Balance│  │ • View Grades  │  │ • Upload Files            │ │
+│  │ • Make Payment │  │ • Get Timetable│  │ • Download Files          │ │
+│  │ • Fees Statement│ │ • Submit Work  │  │ • Delete Files            │ │
+│  └───────┬────────┘  └───────┬────────┘  └─────────────┬──────────────┘ │
+│          │                   │                         │                │
+│          └───────────────────┼─────────────────────────┘                │
+│                              │                                          │
+│                    ┌─────────▼─────────┐                                │
+│                    │   API Route       │ ← The "STUB"                   │
+│                    │   (HTTP → TCP)    │                                │
+│                    └─────────┬─────────┘                                │
+└──────────────────────────────┼──────────────────────────────────────────┘
+                               │ TCP Socket (Port 8080)
+                               ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         RPC SERVER (The "SKELETON")                     │
+│  ┌──────────────────┐        ┌──────────────────────────────────────┐   │
+│  │    TCP Listener  │ ─────► │   Processing Queue (Non-Persistent)  │   │
+│  │   (net module)   │        │   ┌───┐ ┌───┐ ┌───┐ ...              │   │
+│  └──────────────────┘        │   │Job│ │Job│ │Job│                  │   │
+│                               │   └───┘ └───┘ └───┘                  │   │
+│                               └──────────────────────────────────────┘   │
+│  ┌────────────────────────────────────────────────────────────────────┐ │
+│  │                        SERVICE HANDLERS                            │ │
+│  │  ┌─────────────┐  ┌─────────────────┐  ┌─────────────────────────┐ │ │
+│  │  │FileHandler  │  │FinanceHandler   │  │AcademicsHandler         │ │ │
+│  │  │• UPLOAD_FILE│  │• CHECK_BALANCE  │  │• GET_GRADES             │ │ │
+│  │  │• LIST_FILES │  │• MAKE_PAYMENT   │  │• UPLOAD_ASSIGNMENT      │ │ │
+│  │  │• DELETE_FILE│  │• GET_FEES       │  │• GET_TIMETABLE          │ │ │
+│  │  └─────────────┘  └─────────────────┘  └─────────────────────────┘ │ │
+│  └────────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    CONVEX DATABASE (Persistent Storage)                  │
+│                      uploadLog | jobLog | payments                       │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
+
+---
 
 ## 📁 Project Structure
 
 ```
-Cloud Computing/
-├── drive-clone/                   # Next.js Frontend
-│   ├── app/
-│   │   ├── api/rpc/route.ts       # The STUB (Client-side proxy)
-│   │   ├── page.tsx               # Drive UI
-│   │   ├── layout.tsx             # App layout
-│   │   └── globals.css            # Styling
-│   ├── convex/
-│   │   ├── schema.ts               # Database schema
-│   │   └── uploads.ts              # Mutations & queries
+is-bst-university-portal/
+│
+├── server/                        # RPC Server (The Skeleton)
+│   ├── src/
+│   │   ├── server.js              # TCP server with queuing
+│   │   └── protocol.js            # PDU structure & RPC methods
 │   └── package.json
-├── rpc-server/
-│   ├── server.js                   # The SKELETON (TCP Server)
-│   └── protocol.js                 # Shared message format
-└── load_test.js                    # 1000-user simulation
+│
+├── client/                        # Next.js Frontend (The Stub)
+│   ├── app/
+│   │   ├── api/rpc/route.ts       # HTTP-to-TCP bridge
+│   │   ├── page.tsx               # Portal UI with service folders
+│   │   ├── globals.css            # Styling
+│   │   └── layout.tsx             # App layout
+│   ├── convex/
+│   │   ├── schema.ts              # Database schema
+│   │   └── uploads.ts             # Mutations & queries
+│   └── package.json
+│
+├── tests/                         # Testing scripts
+│   ├── load_test.js               # 1000+ concurrent requests
+│   └── test_persistence.js        # Single request test
+│
+├── docs/                          # Documentation
+│   ├── EVALUATION_GUIDE.md        # Detailed evaluation criteria
+│   ├── TESTING_GUIDE.md           # Testing instructions
+│   └── school_system_plan.pdf     # Original requirements
+│
+└── README.md                      # This file
 ```
 
-## 🚀 How to Run
+---
 
-### Terminal 1: Start RPC Server
+## 🚀 Quick Start
+
+### Prerequisites
+- **Node.js 18+** - [Download](https://nodejs.org/)
+
+### 1. Clone & Install
+
 ```bash
-cd rpc-server
+# Clone the repository
+git clone https://github.com/YOUR_USERNAME/is-bst-university-portal.git
+cd is-bst-university-portal
+
+# Install server dependencies
+cd server && npm install && cd ..
+
+# Install client dependencies
+cd client && npm install && cd ..
+```
+
+### 2. Start the System (3 Terminals)
+
+**Terminal 1 - RPC Server:**
+```bash
+cd server/src
 node server.js
 ```
-You should see: `RPC Server listening on port 8080 (TCP)`
 
-### Terminal 2: Start Next.js Client
+**Terminal 2 - Convex Database:**
 ```bash
-cd drive-clone
+cd client
+npx convex dev
+```
+
+**Terminal 3 - Next.js Client:**
+```bash
+cd client
 npm run dev
 ```
-Open http://localhost:3000
 
-### Terminal 3 (Optional): Run Load Test
+### 3. Open http://localhost:3000
+
+You'll see the **University Portal** with three service folders:
+- 💰 **Finance Service** - Check balance, make payments
+- 📚 **Academics Service** - View grades, timetables
+- 📁 **My Files** - Upload and manage documents
+
+Click any folder to "launch" that microservice!
+
+---
+
+## 🧪 Testing
+
+### Quick Test
 ```bash
-node load_test.js 1000
+# Test single RPC call
+node tests/test_persistence.js
 ```
 
-## 📚 Key Concepts Demonstrated
-
-### 1. Stub & Skeleton Pattern
-- **Stub** (`route.ts`): Client-side proxy that hides networking complexity
-- **Skeleton** (`server.js`): Server-side dispatcher that receives and processes calls
-
-### 2. Location Transparency
-The frontend calls `fetch('/api/rpc')` without knowing TCP sockets are involved.
-
-### 3. Marshalling / Unmarshalling
-- `JSON.stringify()` = Marshalling (converting to network format)
-- `JSON.parse()` = Unmarshalling (converting back to objects)
-
-### 4. PDU (Protocol Data Unit)
-```json
-{
-  "header": {
-    "auth_token": "SECRET_123",
-    "method": "UPLOAD_FILE",
-    "timestamp": 1702598400000
-  },
-  "body": {
-    "filename": "test.txt",
-    "content": "Hello World"
-  }
-}
+### Load Test (1000 requests)
+```bash
+node tests/load_test.js 1000
 ```
 
-### 5. Framing
-We use newline (`\n`) as a delimiter to know where one message ends.
+---
 
-### 6. Queueing (Traffic Shaping)
-The `processingQueue[]` absorbs traffic bursts and processes jobs sequentially.
+## 📚 Key Concepts
 
-### 7. TCP vs UDP
-We use TCP because:
-- **Reliable**: Lost packets are retransmitted
-- **Ordered**: Messages arrive in sequence
-- **Connection-oriented**: Ensures both parties are ready
+| Concept | Implementation |
+|---------|---------------|
+| **Stub** | `client/app/api/rpc/route.ts` - HTTP to TCP bridge |
+| **Skeleton** | `server/src/server.js` - TCP server & dispatcher |
+| **TCP Sockets** | `net.createServer()` for reliable communication |
+| **Queuing** | `processingQueue[]` for traffic shaping |
+| **Microservices** | Finance, Academics, Files as separate handlers |
+| **Persistence** | Convex database for durable storage |
 
-### 8. Persistent vs Non-Persistent Storage
-| Storage | Location | Speed | Durability |
-|---------|----------|-------|------------|
-| Queue (Array) | RAM | Fast | Lost on crash |
-| Convex DB | Disk | Slower | Survives restart |
+---
 
-### 9. Security Concerns
-⚠️ Our `auth_token` is sent in plain text over TCP. 
+## 📄 Documentation
 
-**Fix**: Use `tls.createServer()` instead of `net.createServer()` for encryption.
+- [Evaluation Guide](./docs/EVALUATION_GUIDE.md) - Detailed concept explanations
+- [Testing Guide](./docs/TESTING_GUIDE.md) - Step-by-step testing instructions
 
-## 📊 Load Test Results
-
-Running `node load_test.js 1000` demonstrates:
-- Queue absorbs 1000 simultaneous requests
-- Server doesn't crash
-- All requests eventually complete
-- Response time increases under load (queued waiting)
+---
 
 ## 🔧 Technologies Used
 
@@ -159,3 +199,9 @@ Running `node load_test.js 1000` demonstrates:
 3. **Why Both Storage Types?** Queue for speed, DB for durability
 4. **Security Gap**: Plain-text tokens need TLS encryption
 5. **Location Transparency**: Frontend doesn't know about sockets
+
+---
+
+## 📜 License
+
+Academic project for IS-BST University.

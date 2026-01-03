@@ -203,16 +203,146 @@ async function executeMethod(method, payload) {
                 deletedAt: new Date().toISOString()
             };
 
+        // ============ FINANCE SERVICE METHODS ============
+
         case RPC_METHODS.CHECK_BALANCE:
             /**
-             * CHECK_BALANCE: Utility method for load testing
-             * Simulates a lightweight operation
+             * CHECK_BALANCE: Get student's financial balance
+             * Demonstrates a lightweight RPC call for the Finance microservice
              */
+            console.log(`[Finance] Checking balance for student: ${payload.student_id || payload.user_id}`);
             return {
-                user_id: payload.user_id,
-                balance: Math.floor(Math.random() * 10000),
-                currency: 'USD'
+                student_id: payload.student_id || payload.user_id || 'STU001',
+                balance: 300000,  // Amount owed
+                total_fees: 1500000,
+                paid: 1200000,
+                currency: 'NGN',
+                status: 'partial_payment'
             };
+
+        case RPC_METHODS.MAKE_PAYMENT:
+            /**
+             * MAKE_PAYMENT: Process a fee payment
+             * In production: Integrate with payment gateway (Paystack, Flutterwave)
+             * Here: Simulate transaction and persist to Convex
+             */
+            const paymentId = `PAY_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+            console.log(`[Finance] Processing payment: ${payload.amount} for ${payload.student_id}`);
+
+            try {
+                await convex.mutation("uploads:logUpload", {
+                    filename: `payment_${paymentId}.json`,
+                    fileSize: JSON.stringify(payload).length,
+                    contentPreview: `Payment: ${payload.amount} NGN`,
+                    status: "completed"
+                });
+            } catch (err) {
+                console.error("[Convex] Failed to log payment:", err.message);
+            }
+
+            return {
+                payment_id: paymentId,
+                student_id: payload.student_id,
+                amount: payload.amount,
+                description: payload.description || 'Tuition Fee',
+                status: 'completed',
+                reference: `REF_${Date.now()}`,
+                timestamp: new Date().toISOString()
+            };
+
+        case RPC_METHODS.GET_FEES_STATEMENT:
+            /**
+             * GET_FEES_STATEMENT: Detailed fees breakdown
+             * Demonstrates returning structured financial data
+             */
+            console.log(`[Finance] Fetching fees statement for: ${payload.student_id}`);
+            return {
+                student_id: payload.student_id || 'STU001',
+                academic_year: '2025/2026',
+                items: [
+                    { description: 'Tuition Fee', amount: 1200000, status: 'paid' },
+                    { description: 'Library Fee', amount: 50000, status: 'paid' },
+                    { description: 'Lab Fee', amount: 100000, status: 'pending' },
+                    { description: 'Exam Fee', amount: 150000, status: 'pending' }
+                ],
+                total: 1500000,
+                paid: 1250000,
+                balance: 250000,
+                currency: 'NGN',
+                due_date: '2026-02-15'
+            };
+
+        // ============ ACADEMICS SERVICE METHODS ============
+
+        case RPC_METHODS.GET_GRADES:
+            /**
+             * GET_GRADES: Retrieve student transcript
+             * Demonstrates structured academic data retrieval
+             */
+            console.log(`[Academics] Fetching grades for: ${payload.student_id}`);
+            return {
+                student_id: payload.student_id || 'STU001',
+                student_name: 'John Doe',
+                semester: payload.semester || 'Fall 2025',
+                courses: [
+                    { code: 'CS401', name: 'Distributed Systems', grade: 'A', credits: 3, score: 85 },
+                    { code: 'CS402', name: 'Cloud Computing', grade: 'B+', credits: 3, score: 78 },
+                    { code: 'CS403', name: 'Network Security', grade: 'A-', credits: 3, score: 82 },
+                    { code: 'CS404', name: 'Database Systems', grade: 'A', credits: 3, score: 88 }
+                ],
+                gpa: 3.67,
+                cgpa: 3.52,
+                credits_earned: 12
+            };
+
+        case RPC_METHODS.UPLOAD_ASSIGNMENT:
+            /**
+             * UPLOAD_ASSIGNMENT: Submit coursework via RPC
+             * Combines file upload with academic metadata
+             */
+            const assignmentId = `ASN_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+            console.log(`[Academics] Assignment submitted: ${payload.filename} for ${payload.course}`);
+
+            try {
+                await convex.mutation("uploads:logUpload", {
+                    filename: `assignments/${payload.course}/${payload.filename}`,
+                    fileSize: payload.content ? payload.content.length : 0,
+                    contentPreview: payload.content ? payload.content.substring(0, 50) : "",
+                    status: "submitted"
+                });
+            } catch (err) {
+                console.error("[Convex] Failed to log assignment:", err.message);
+            }
+
+            return {
+                assignment_id: assignmentId,
+                student_id: payload.student_id || 'STU001',
+                course: payload.course,
+                filename: payload.filename,
+                submitted_at: new Date().toISOString(),
+                status: 'submitted',
+                message: 'Assignment submitted successfully'
+            };
+
+        case RPC_METHODS.GET_TIMETABLE:
+            /**
+             * GET_TIMETABLE: Retrieve class schedule
+             * Demonstrates structured schedule data
+             */
+            console.log(`[Academics] Fetching timetable for: ${payload.student_id}`);
+            return {
+                student_id: payload.student_id || 'STU001',
+                semester: 'Spring 2026',
+                schedule: [
+                    { day: 'Monday', time: '09:00-11:00', course: 'CS401 - Distributed Systems', room: 'LT1', lecturer: 'Dr. Smith' },
+                    { day: 'Monday', time: '14:00-16:00', course: 'CS403 - Network Security', room: 'Lab 2', lecturer: 'Prof. Johnson' },
+                    { day: 'Wednesday', time: '10:00-12:00', course: 'CS402 - Cloud Computing', room: 'Lab 3', lecturer: 'Dr. Williams' },
+                    { day: 'Thursday', time: '09:00-11:00', course: 'CS404 - Database Systems', room: 'LT2', lecturer: 'Dr. Brown' },
+                    { day: 'Friday', time: '13:00-15:00', course: 'CS401 - Distributed Systems (Lab)', room: 'Lab 1', lecturer: 'Dr. Smith' }
+                ]
+            };
+
+        // ============ UTILITY METHODS ============
 
         case RPC_METHODS.PING:
             /**
@@ -222,7 +352,8 @@ async function executeMethod(method, payload) {
             return {
                 pong: true,
                 serverTime: Date.now(),
-                uptime: (Date.now() - stats.startTime) / 1000
+                uptime: (Date.now() - stats.startTime) / 1000,
+                services: ['FileService', 'FinanceService', 'AcademicsService']
             };
 
         default:
